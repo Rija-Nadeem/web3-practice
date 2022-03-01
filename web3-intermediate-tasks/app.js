@@ -296,7 +296,32 @@ async function task4() {
   // console.log('subscription',subscription)
 }
 
+async function task5(tx){
+  try{
+    const data = await web3.eth.getTransactionReceipt(tx);
+    if(data){
+      if(data.status){
+        const fees = toEth(data.effectiveGasPrice.toString()) * data.gasUsed;
+        console.log('transaction fees => ', fees, ' eth');
+      }else{
+        console.log('transaction was failed')
+      }
+    }else{
+      console.log('transaction is in pending')
+    }
+  } catch(err){
+    console.log(err)
+  }
+}
+
 // task1();
 // task2(contractABI, contactAddressBasic);
 // task3(contractABI, contactAddressBasic, "AllEvents", 10005387, 'latest');
-task4();
+// task4();
+
+// confirmed
+// task5('0xb3ddd1472e33f4d2f8ba02920d235e4ed4cac1d0c83ee4156837de9639b422cc');
+// pending
+// task5('0xf7602433e873b0b1c227c549fe5270316ffea970c41a0903f6d57be491d1b0bd');
+//failed
+// task5('0xd91fdbbf350511591685fcfd37d5d992a50c47f1eb36fc2200aca83d8f08cf2c')
