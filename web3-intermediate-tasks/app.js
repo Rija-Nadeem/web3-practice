@@ -411,6 +411,93 @@ async function task7(){
   });
 }
 
+async function task8(){
+  let endBlockNumber = await web3.eth.getBlock('latest');
+  let startBlockNumber = endBlockNumber.number-10; //10213973
+  console.log("Searching for transactions to/from account \"" + address1 + "\" within blocks "  + startBlockNumber + " and " + endBlockNumber.number);
+  for (let i = startBlockNumber; i <= endBlockNumber.number; i++) {
+      console.log("Searching block " + i);
+      let block = await web3.eth.getBlock(i, true);
+      if (block != null && block.transactions != null) {
+        block.transactions.forEach( function(e) {
+          if (address1 == "*" || address1 == e.from || address1 == e.to) {
+            console.log("  tx hash          : " + e.hash + "\n"
+              + "   nonce           : " + e.nonce + "\n"
+              + "   blockHash       : " + e.blockHash + "\n"
+              + "   blockNumber     : " + e.blockNumber + "\n"
+              + "   transactionIndex: " + e.transactionIndex + "\n"
+              + "   from            : " + e.from + "\n" 
+              + "   to              : " + e.to + "\n"
+              + "   value           : " + e.value + "\n"
+              + "   time            : " + block.timestamp + " " + new Date(block.timestamp * 1000).toGMTString() + "\n"
+              + "   gasPrice        : " + e.gasPrice + "\n"
+              + "   gas             : " + e.gas + "\n"
+              + "   input           : " + e.input);
+          }
+        })
+      }
+    }
+}
+
+async function task9(abi, address){
+  const contract = new web3.eth.Contract(abi, address);
+  let res = await contract.getPastEvents("Transfer", {
+    fromBlock: 0, //10005361
+    toBlock: "latest",
+  });
+  console.log(" ERC20Basic (ERC20) TRANSFER EVENTS", res, res.length);
+}
+
+async function task10(contractAddress){
+  // let currentBlockNum = await web3.eth.getBlockNumber();
+  let currentBlockNum = 9742985; //9742984 actual block when contract was created
+    let txFound = false;
+
+    while(currentBlockNum >= 0 && !txFound) {
+        const block = await web3.eth.getBlock(currentBlockNum, true);
+        const transactions = block.transactions;
+
+        for(let j = 0; j < transactions.length; j++) {
+            if(!transactions[j].to) {
+                const receipt = await web3.eth.getTransactionReceipt(transactions[j].hash);
+                if(receipt.contractAddress && receipt.contractAddress.toLowerCase() === contractAddress.toLowerCase()) {
+                    txFound = true;
+                    console.log(`Contract Creator Address: ${transactions[j].from}`);
+                    break;
+                }
+            }
+        }
+        currentBlockNum--;
+    }
+}
+
+async function task11(abi, address){
+  let addressesMadeTxUsingToken = [];
+  let count = 0;
+    
+  const contract = new web3.eth.Contract(abi, address);
+  let res = await contract.getPastEvents('Transfer', {
+      fromBlock: 0, //10005361
+      toBlock: 'latest'
+  })
+
+
+  res.map((tx) => {
+      addressesMadeTxUsingToken.push(tx.returnValues.from)
+      addressesMadeTxUsingToken.push(tx.returnValues.to)
+    })
+    addressesMadeTxUsingToken = [...new Set(addressesMadeTxUsingToken)];
+    addressesMadeTxUsingToken.map(async(address, index) => {
+      let balance = await web3.utils.fromWei(await contract.methods.balanceOf(address).call());
+      if(parseInt(balance) > 0){
+        count++;
+      }
+      if(index == addressesMadeTxUsingToken.length - 1){
+        console.log('Number of token holders: ', count);
+      }
+    })
+}
+
 // task1();
 
 // task2(contractABI, contactAddressBasic);
@@ -429,3 +516,12 @@ async function task7(){
 // task6("0x10d533e3bdad927cc3470c7132ca72389bb213bcd2d133e41a811b645ae8b122");
 
 // task7();
+
+// task8();
+
+// task9(contractABI, contactAddressBasic);
+
+//https://stackoverflow.com/questions/54056587/how-to-get-the-address-of-the-contract-creator/54066603#54066603
+// task10(contactAddressBasic);
+
+// task11(contractABI, contactAddressBasic);
