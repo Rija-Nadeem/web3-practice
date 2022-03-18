@@ -187,6 +187,7 @@ async function tokenBalance(contract, address) {
   return bal;
 }
 
+
 //tasks functions
 
 async function task1() {
@@ -202,7 +203,7 @@ async function task1() {
   console.log("balance of account 1 ==>", toEth(balance1));
   console.log("balance of account 2 ==>", toEth(balance2));
 
-  web3.eth.getTransactionCount(address1, (err, txCount) => {
+  await web3.eth.getTransactionCount(address1, (err, txCount) => {
     //build transaction
     const txObject = {
       nonce: web3.utils.toHex(txCount),
@@ -296,32 +297,135 @@ async function task4() {
   // console.log('subscription',subscription)
 }
 
-async function task5(tx){
-  try{
+async function task5(tx) {
+  try {
     const data = await web3.eth.getTransactionReceipt(tx);
-    if(data){
-      if(data.status){
+    if (data) {
+      if (data.status) {
         const fees = toEth(data.effectiveGasPrice.toString()) * data.gasUsed;
-        console.log('transaction fees => ', fees, ' eth');
-      }else{
-        console.log('transaction was failed')
+        console.log("transaction fees => ", fees, " eth");
+      } else {
+        console.log("transaction was failed");
       }
-    }else{
-      console.log('transaction is in pending')
+    } else {
+      console.log("transaction is in pending");
     }
-  } catch(err){
-    console.log(err)
+  } catch (err) {
+    console.log(err);
   }
 }
 
+async function task6(txHash) {
+  //https://medium.com/@codetractio/inside-an-ethereum-transaction-fa94ffca912f
+  // let transaction= await web3.eth.getTransaction(txHash)
+  // const data = JSON.stringify(transaction)
+  // console.log(`${toEth(transaction.value)} eth were transfered from ${transaction.from} to ${transaction.to}`)
+  try {
+    let transaction = await web3.eth.getTransaction(txHash);
+
+    let contractMethodParams = "0x" + transaction.input.slice(10);
+    let params = web3.eth.abi.decodeParameters(
+      ["address", "uint256"],
+      contractMethodParams
+    );
+    console.log(params);
+    console.log(
+      `${web3.utils.fromWei(params[1])} tokens were transfered from ${
+        transaction.from
+      } to ${params[0]}`
+    );
+  } catch (error) {
+    console.log("Error => ", error);
+  }
+}
+
+async function task7(){
+  // slowSendingEthTransaction();
+  // await fastSendingEthTransaction()
+
+  console.log("**************Task 7**************");
+
+  let balance1;
+  let balance2;
+
+  balance1 = await getBalance(address1);
+  balance2 = await getBalance(address2);
+
+  console.log("-----------before-transaction-----------");
+  console.log("balance of account 1 ==>", toEth(balance1));
+  console.log("balance of account 2 ==>", toEth(balance2));
+
+  web3.eth.getTransactionCount(address1, (err, txCount) => {
+    //build transaction
+    const txObject = {
+      nonce: web3.utils.toHex(txCount),
+      to: address2,
+      value: web3.utils.toHex(web3.utils.toWei("0.1", "ether")),
+      gasLimit: web3.utils.toHex(21000),
+      gasPrice: web3.utils.toHex(web3.utils.toWei("5", "gwei")),
+    };
+
+    // Sign the transaction
+    const tx = new Tx(txObject, { chain: "rinkeby" });
+    tx.sign(privateKey1);
+
+    const serializedTx = tx.serialize();
+    const raw = "0x" + serializedTx.toString("hex");
+
+    // Broadcast the transaction
+    web3.eth
+      .sendSignedTransaction(raw, (err, txHash) => {
+        console.log("slow txHash:", txHash, "err", err);
+        // Now go check etherscan to see the transaction!
+      })
+      .on("receipt", async () => {
+        balance1 = await getBalance(address1);
+        balance2 = await getBalance(address2);
+        console.log("-----------slow-after-transaction-----------");
+        console.log("balance of account 1 ==>", toEth(balance1));
+        console.log("balance of account 2 ==>", toEth(balance2));
+      });
+
+      //fast-transaction
+      txObject.gasPrice=web3.utils.toHex(web3.utils.toWei("20", "gwei"));
+       // Sign the transaction
+    const txFast = new Tx(txObject, { chain: "rinkeby" });
+    txFast.sign(privateKey1);
+
+    const serializedTxFast = txFast.serialize();
+    const rawFast = "0x" + serializedTxFast.toString("hex");
+
+    // Broadcast the transaction
+    web3.eth
+      .sendSignedTransaction(rawFast, (err, txHash) => {
+        console.log("fast txHash:", txHash, "err", err);
+        // Now go check etherscan to see the transaction!
+      })
+      .on("receipt", async () => {
+        balance1 = await getBalance(address1);
+        balance2 = await getBalance(address2);
+        console.log("-----------fast-after-transaction-----------");
+        console.log("balance of account 1 ==>", toEth(balance1));
+        console.log("balance of account 2 ==>", toEth(balance2));
+      });
+  });
+}
+
 // task1();
+
 // task2(contractABI, contactAddressBasic);
+
 // task3(contractABI, contactAddressBasic, "AllEvents", 10005387, 'latest');
+
 // task4();
 
 // confirmed
 // task5('0xb3ddd1472e33f4d2f8ba02920d235e4ed4cac1d0c83ee4156837de9639b422cc');
 // pending
 // task5('0xf7602433e873b0b1c227c549fe5270316ffea970c41a0903f6d57be491d1b0bd');
-//failed
+// failed
 // task5('0xd91fdbbf350511591685fcfd37d5d992a50c47f1eb36fc2200aca83d8f08cf2c')
+
+// task6("0x10d533e3bdad927cc3470c7132ca72389bb213bcd2d133e41a811b645ae8b122");
+
+// task7();
